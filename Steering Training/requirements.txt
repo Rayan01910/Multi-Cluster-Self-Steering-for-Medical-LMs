@@ -1,0 +1,8 @@
+torch
+transformers
+datasets
+scikit-learn
+tqdm
+numpy
+scipy
+accelerate>=0.33.0
