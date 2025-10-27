@@ -24,3 +24,12 @@ and 1) </confidence> )
 
 def get_system_prompt():
     return RLCR_SYSTEM_PROMPT
+
+
+"""
+
+# This is a test prompt taken from the RLCR paper.
+
+
+def get_system_prompt():
+    return RLCR_SYSTEM_PROMPT
