@@ -7,10 +7,13 @@ from models import CausalLMWrapper
 from steering import compute_sample_steering, kmeans_dictionary
 from projection import train_projection
 from calibrator import ConfidenceCalibrator
+from system_prompt import get_system_prompt
+
 
 def build_prompt(question: str, options: list[str]) -> str:
-    # Minimal MCQ format (change as you like)
+    sys = get_system_prompt().strip()
     fmt = (
+        f"{sys}\n\n"
         "You are a clinical reasoning assistant.\n"
         "Question:\n{q}\n\nOptions:\nA) {a}\nB) {b}\nC) {c}\nD) {d}\n"
         "Answer with just the letter (A/B/C/D)."
@@ -68,3 +71,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Note:
+# Temperature scaling (confidence calibration) is performed separately in main_eval.py
+# following Wang et al., 2025 ("Restoring Calibration for Aligned LLMs").
+# Training here is temperature-independent.

@@ -1,174 +1,89 @@
-import numpy as np
-from math_verify import verify, parse
+# get_tag_contents.py
+# Robust tag extraction from Qwen (or any LLM) generations.
+# We look for <answer>...</answer>, <confidence>...</confidence>, <analysis>...</analysis>,
+# and include fallbacks for minor formatting drift.
+
+from __future__ import annotations
 import re
-from vllm import LLM, SamplingParams
-import gc
-from transformers import AutoTokenizer
-import string
-import hashlib
-from sklearn.metrics import roc_curve, auc
+from typing import Optional, Tuple
 
+_ANSWER_TAG = re.compile(r"<\s*answer\s*>(?P<ans>.*?)<\s*/\s*answer\s*>", re.IGNORECASE | re.DOTALL)
+_CONF_TAG   = re.compile(r"<\s*confidence\s*>(?P<conf>.*?)<\s*/\s*confidence\s*>", re.IGNORECASE | re.DOTALL)
+_ANAL_TAG   = re.compile(r"<\s*analysis\s*>(?P<ana>.*?)<\s*/\s*analysis\s*>", re.IGNORECASE | re.DOTALL)
 
-## Confidence Extraction Function
-def confidence_extractor(response, **kwargs):
-    """Extracts the confidence from the completions
-    If a float is found within confidence tags, it is processed as follows:
-    If the float is between 0 and 1, it is returned as is.
-    If the float is between 1 and 100, it is divided by 100 and returned.
-    If float is not directly found, the first number in the string is extracted and processed as above.
-    If no float is found, 0 is returned.    
+# Common letter tokens we’ll accept for MCQ
+_VALID_LETTERS = {"A","B","C","D"}
+
+def _clean(s: str) -> str:
+    return s.strip().replace("\u200b", "").strip()
+
+def _first_match(regex: re.Pattern, text: str) -> Optional[str]:
+    m = regex.search(text)
+    if not m:
+        return None
+    return _clean(m.group(1))
+
+def parse_answer(raw: str) -> Optional[str]:
     """
-    conf_pattern = r"<confidence>(.*?)</confidence>"
-    # Get all <confidence>...</confidence> occurrences
-    conf_matches = re.findall(conf_pattern, response, re.DOTALL | re.MULTILINE)
-    # Get the last confidence, if exists
-    last_confidence = conf_matches[-1] if conf_matches else ""
-    if last_confidence == "":
-        return 0, 0.0
-    else:
-        try:
-            confidence = float(last_confidence)
-            if confidence > 1 and confidence <= 100:
-                return 1, confidence/100
-            elif confidence >= 0 and confidence <= 1:
-                return 1, confidence
-            else:
-                return 0, 0.0
-        except:
-            # extract the first number in the string
-            first_number = re.search(r'-?\d+(?:\.\d+)?', last_confidence)
-            if first_number:
-                first_number = float(first_number.group())
-                if first_number >= 0 and first_number <= 1:
-                    return 1, first_number
-                elif first_number > 1 and first_number <= 100:
-                    return 1, first_number/100
-                else:
-                    return 0, 0.0
-            else:
-                return 0, 0.0
-
-### Answer Extraction
-
-def gen_correctness_reward(completions, answer, **kwargs):
+    Returns 'A'|'B'|'C'|'D' if found inside <answer>...</answer>, else tries gentle fallbacks.
     """
-    Reward function that checks if the answer is correct or not
-    The answer must be present within the answer tags.
-    For math datasets, the correctness is checked using huggingface math-verify.
-    For factual datasets, the correctness is checked using exact match.
+    # Primary: tagged
+    tagged = _first_match(_ANSWER_TAG, raw)
+    if tagged:
+        # Normalize: keep only first A/B/C/D if present
+        tagged_up = tagged.upper()
+        # direct single letter?
+        if tagged_up in _VALID_LETTERS:
+            return tagged_up
+        # look for first letter occurrence
+        m = re.search(r"\b([ABCD])\b", tagged_up)
+        if m:
+            return m.group(1)
 
+    # Fallback 1: explicit “Answer: X”
+    m = re.search(r"(?i)\banswer\s*:\s*([ABCD])\b", raw)
+    if m:
+        return m.group(1).upper()
+
+    # Fallback 2: common patterns like “Final answer is C”
+    m = re.search(r"(?i)\bfinal\s+answer(?:\s+is)?\s*([ABCD])\b", raw)
+    if m:
+        return m.group(1).upper()
+
+    return None
+
+def parse_confidence(raw: str) -> Optional[float]:
     """
-    ans_pattern = r"<answer>(.*?)</answer>"
-    completion_contents = [completion[0]["content"]
-                           for completion in completions]
-    eval_contents = [e for e in answer]
-    matches = []
+    Extracts a float in [0,1] from <confidence>...</confidence>.
+    Accepts '0.87', '87%', or '0,87' (European comma) and clamps to [0,1].
+    """
+    tagged = _first_match(_CONF_TAG, raw)
+    if tagged is None:
+        return None
 
-    for content, e in zip(completion_contents, eval_contents):
-        # Get all <answer>...</answer> occurrences
-        ans_matches = re.findall(ans_pattern, content,
-                                 re.DOTALL | re.MULTILINE)
-        # Get the last answer, if exists
-        last_answer = ans_matches[-1] if ans_matches else ""
-        attempt = parse(last_answer)
-        label = verify(e, attempt)
-        if label ==0 :
-            label = exact_match_score(last_answer, e)
-        matches.append(float(label))
+    s = tagged.strip()
+    # handle percent
+    pct = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", s)
+    if pct:
+        v = float(pct.group(1)) / 100.0
+        return float(min(max(v, 0.0), 1.0))
 
-    return matches
+    # handle decimal with comma
+    s = s.replace(",", ".")
+    try:
+        v = float(s)
+        # If they gave something like 87, interpret as 0.87 only if >1 and <=100
+        if v > 1.0 and v <= 100.0:
+            v = v / 100.0
+        return float(min(max(v, 0.0), 1.0))
+    except Exception:
+        return None
 
-def normalize_answer(s):
-    s = str(s)
-    
-    def remove_articles(text):
-        return re.sub(r'\b(a|an|the)\b', ' ', text)
+def parse_analysis(raw: str) -> Optional[str]:
+    return _first_match(_ANAL_TAG, raw)
 
-    def white_space_fix(text):
-        return ' '.join(text.split())
-
-    def remove_punc(text):
-        exclude = set(string.punctuation)
-        return ''.join(ch for ch in text if ch not in exclude)
-
-    def lower(text):
-        return text.lower()
-    
-    return white_space_fix(remove_articles(remove_punc(lower(s))))
-
-def exact_match_score(prediction, ground_truth):
-    return (normalize_answer(prediction) == normalize_answer(ground_truth))
-
-def string_to_short_id(string):
-    # Use SHA-256 hash function
-    hash_object = hashlib.sha256(string.encode())
-    # Convert the hash to a hexadecimal string
-    hex_dig = hash_object.hexdigest()
-    # Convert the hexadecimal string to an integer
-    hash_int = int(hex_dig, 16)
-    # Truncate to 8 digits by taking modulo 10^8
-    hash_id = hash_int % 10**10
-    return hash_id
-
-def hash_dataset(example,key):
-    return {"id": string_to_short_id(example[key])} 
-
-def compute_pass_n(evals,k):
-    n = len(evals[0])  
-    corrects,totals = [],[] 
-    for i in range(len(evals)):
-        eval_list = evals[i]
-        #count number of 1s in eval_list
-        count = 0
-        for j in range(n):
-            if eval_list[j] == 1:
-                count += 1
-        corrects.append(count)
-        totals.append(n)
-    return estimate_pass_at_k(totals,corrects,k).mean()
-
-def estimate_pass_at_k(num_samples, num_correct, k):
-    """Estimates pass@k of each problem and returns them in an array."""
-
-    def estimator(n: int, c: int, k: int) -> float:
-        """Calculates 1 - comb(n - c, k) / comb(n, k)."""
-        if n - c < k:
-            return 1.0
-        return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
-    import itertools
-    if isinstance(num_samples, int):
-        num_samples_it = itertools.repeat(num_samples, len(num_correct))
-    else:
-        assert len(num_samples) == len(num_correct)
-        num_samples_it = iter(num_samples)
-
-    return np.array([estimator(int(n), int(c), k) for n, c in zip(num_samples_it, num_correct)])
-
-
-def get_brier(correctness,confidence):
-    brier_score = np.mean((confidence - correctness) ** 2)
-    return brier_score
-
-def get_ece(correctness,confidence):
-    # Calculate ECE using 10 bins, including 0 and 1
-    n_bins = 10
-    bin_edges = np.linspace(0, 1, n_bins + 1)
-    # Ensure 0 and 1 are included in their own bins
-    bin_edges[0] = -np.inf  # Include 0 in first bin
-    bin_edges[-1] = np.inf  # Include 1 in last bin
-    bin_indices = np.digitize(confidence, bin_edges) - 1
-    
-    ece = 0
-    for i in range(n_bins):
-        mask = bin_indices == i
-        if np.sum(mask) > 0:
-            bin_conf = np.mean(confidence[mask])
-            bin_acc = np.mean(correctness[mask])
-            bin_weight = np.sum(mask) / len(confidence)
-            ece += bin_weight * np.abs(bin_conf - bin_acc)
-    return ece
-
-def get_auroc(correctness,confidence):
-    fpr, tpr, _ = roc_curve(correctness, confidence)
-    auroc = auc(fpr, tpr)
-    return auroc
+def extract_all(raw: str) -> Tuple[Optional[str], Optional[float], Optional[str]]:
+    """
+    Convenience: returns (answer_letter, confidence_float, analysis_text)
+    """
+    return parse_answer(raw), parse_confidence(raw), parse_analysis(raw)
