@@ -6,7 +6,7 @@ import torch, numpy as np
 from tqdm import tqdm
 
 from calibration2.apply_ats2 import load_ats, apply_ats
-from config2 import ATS_PATH, LOG_DIR, DEVICE, TARGET_LAYER
+from baselines.steering2.config2 import ATS_PATH, LOG_DIR, DEVICE, TARGET_LAYER
 from data2.medqa_dataset2 import MedQADataset, LETTER
 from data2.prompt_builder2 import build_prompt
 from eval2.metrics2 import brier_multiclass, ece_multiclass, macro_auroc_ovr

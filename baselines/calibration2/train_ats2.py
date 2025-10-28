@@ -2,12 +2,12 @@ import torch, torch.nn as nn, torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data.medqa_dataset import MedQADataset, LETTER
-from data.prompt_builder import build_prompt
-from model.loader import load_model
-from model.hooks import last_hidden_last_token
-from calibration.ats_head import ATSHead
-from config import DEVICE, TARGET_LAYER, ATS_PATH, BATCH_SIZE
+from baselines.data2.medqa_dataset2 import MedQADataset, LETTER
+from baselines.data2.prompt_builder2 import build_prompt
+from baselines.model2.loader2 import load_model
+from baselines.model2.hooks2 import last_hidden_last_token
+from baselines.calibration2.ats_head2 import ATSHead
+from baselines.steering2.config2 import DEVICE, TARGET_LAYER, ATS_PATH, BATCH_SIZE
 
 def selective_loss(q_logits, y_idx, alpha=0.5):
     # q_logits: [B, 4] calibrated logits (after scaling), y_idx: [B]

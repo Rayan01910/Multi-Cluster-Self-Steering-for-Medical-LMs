@@ -1,6 +1,7 @@
 import torch
-from calibration.ats_head import ATSHead
-from config import ATS_PATH, DEVICE
+
+from baselines.calibration2.ats_head2 import ATSHead
+from baselines.steering2.config2 import ATS_PATH, DEVICE
 
 def load_ats(dim):
     head = ATSHead(dim).to(DEVICE)

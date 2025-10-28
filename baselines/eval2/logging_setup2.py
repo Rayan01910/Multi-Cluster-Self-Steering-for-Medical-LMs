@@ -1,5 +1,5 @@
 import logging, os
-from config import LOG_DIR
+from baselines.steering2.config2 import LOG_DIR
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logger(name, filename):

@@ -1,6 +1,6 @@
 MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
 TARGET_LAYER = -1                  # last hidden layer
-ALPHA = 0.3                        # steering strength (tune)
+ALPHA = 0.3                        # steering2 strength (tune)
 COSINE_GATE = None                 # optional: only steer if cos(W·h, v*) < τ
 MAX_NEW_TOKENS = 1                 # MCQ: next-token scoring only
 

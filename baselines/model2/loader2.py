@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from config import MODEL_NAME, DEVICE
+from baselines.steering2.config2 import MODEL_NAME, DEVICE
 
 def load_model():
     tok = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
