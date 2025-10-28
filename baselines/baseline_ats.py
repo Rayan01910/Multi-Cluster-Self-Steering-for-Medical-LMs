@@ -5,14 +5,14 @@ from pathlib import Path
 import torch, numpy as np
 from tqdm import tqdm
 
-from calibration2.apply_ats2 import load_ats, apply_ats
+from baselines.calibration2.apply_ats2 import load_ats, apply_ats
 from baselines.steering2.config2 import ATS_PATH, LOG_DIR, DEVICE, TARGET_LAYER
-from data2.medqa_dataset2 import MedQADataset, LETTER
-from data2.prompt_builder2 import build_prompt
-from eval2.metrics2 import brier_multiclass, ece_multiclass, macro_auroc_ovr
-from eval2.logging_setup2 import setup_logger
-from model2.hooks2 import last_hidden_last_token
-from model2.loader2 import load_model
+from baselines.data2.medqa_dataset2 import MedQADataset, LETTER
+from baselines.data2.prompt_builder2 import build_prompt
+from baselines.eval2.metrics2 import brier_multiclass, ece_multiclass, macro_auroc_ovr
+from baselines.eval2.logging_setup2 import setup_logger
+from baselines.model2.hooks2 import last_hidden_last_token
+from baselines.model2.loader2 import load_model
 
 
 def _ensure_log_dir():

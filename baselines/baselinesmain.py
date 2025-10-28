@@ -2,11 +2,11 @@ import argparse
 import json
 from pathlib import Path
 
-from config2 import ATS_PATH
+from baselines.steering2.config2 import ATS_PATH
 
 
 def _cmd_train(args: argparse.Namespace) -> None:
-    from calibration2.train_ats2 import train
+    from baselines.calibration2.train_ats2 import train
 
     if Path(ATS_PATH).exists() and not args.overwrite:
         raise SystemExit(
@@ -18,7 +18,7 @@ def _cmd_train(args: argparse.Namespace) -> None:
 
 
 def _cmd_eval(args: argparse.Namespace) -> None:
-    from baseline_ats import evaluate_baseline
+    from baselines.baseline_ats import evaluate_baseline
 
     metrics, csv_path = evaluate_baseline(split=args.split, csv_name=args.csv_name)
     print(f"Saved per-sample probabilities to {csv_path}")
