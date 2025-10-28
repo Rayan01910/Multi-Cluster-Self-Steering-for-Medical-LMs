@@ -95,3 +95,16 @@ pip install transformers datasets accelerate scikit-learn tqdm numpy scipy
 
 # Optional (for visual logs)
 pip install seaborn matplotlib
+
+```
+##  Baseline Results
+
+### MedQA Test Dataset:
+
+**Qwen2.5-3B Base Model (No Training)**
+
+AUROC: 0.5766651340314239
+ECE: 0.3436040770136646
+Brier: 0.3646788759271213
+
+Accuracy: 0.4807541241162608

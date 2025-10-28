@@ -1,0 +1,7 @@
+transformers
+scikit-learn
+numpy
+datasets
+torch
+hf_transfer
+accelerate
