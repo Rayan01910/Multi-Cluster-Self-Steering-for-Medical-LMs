@@ -33,6 +33,7 @@ def main():
     # Also collect cluster inputs (same V list)
     Vs = []
 
+    
     for ex in tqdm(train_ds, desc="Collecting steering pairs"):
         q = ex[cfg.text_field]
         opts = [ex[f] for f in cfg.option_fields]
