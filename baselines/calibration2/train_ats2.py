@@ -1,3 +1,5 @@
+import os
+
 import torch, torch.nn as nn, torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -96,5 +98,9 @@ def train(split="validation"):
 
             opt.zero_grad(); loss.backward(); opt.step()
             pbar.set_postfix(loss=float(loss))
+
+    save_dir = os.path.dirname(ATS_PATH)
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
     torch.save(head.state_dict(), ATS_PATH)
     return head
