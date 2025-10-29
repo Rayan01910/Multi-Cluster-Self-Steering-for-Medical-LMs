@@ -6,3 +6,4 @@ torch
 tqdm
 hf_transfer
 accelerate
+matplotlib

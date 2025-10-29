@@ -20,8 +20,10 @@ def _cmd_train(args: argparse.Namespace) -> None:
 def _cmd_eval(args: argparse.Namespace) -> None:
     from baselines.baseline_ats import evaluate_baseline
 
-    metrics, csv_path = evaluate_baseline(split=args.split, csv_name=args.csv_name)
+    metrics, csv_path, plot_path = evaluate_baseline(split=args.split, csv_name=args.csv_name)
     print(f"Saved per-sample probabilities to {csv_path}")
+    if plot_path is not None:
+        print(f"Saved metric trend plot to {plot_path}")
     print(json.dumps(metrics, indent=2, sort_keys=True))
 
 
