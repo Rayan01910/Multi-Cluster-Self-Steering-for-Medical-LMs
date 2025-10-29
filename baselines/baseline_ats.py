@@ -71,7 +71,7 @@ def evaluate_baseline(split="validation", csv_name="baseline_ats.csv"):
         running_ece = ece_multiclass(probs_arr, labels_arr)
         running_auroc = macro_auroc_ovr(probs_arr, labels_arr)
 
-        correct_flag = "✓" if pred_idx == label else "✗"
+        correct_flag = "1" if pred_idx == label else "0"
         if np.isnan(running_auroc):
             auroc_str = "nan"
         else:
