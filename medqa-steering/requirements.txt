@@ -7,3 +7,4 @@ numpy
 tqdm
 protobuf
 sentencepiece
+hf_transfer

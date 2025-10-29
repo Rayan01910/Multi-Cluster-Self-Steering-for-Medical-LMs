@@ -11,11 +11,11 @@ from get_tag_contents import extract_all
 from steering.io import save_vectors
 from config import DEVICE, TARGET_LAYER, LOG_DIR
 
-logging.basicConfig(filename=f"{LOG_DIR}/compute_vectors.log", level=logging.INFO)
+logging.basicConfig(filename=f"{LOG_DIR}/compute_vectors.log", level=logging.INFO) # independent of main script and file location
 logger = logging.getLogger(__name__)
 
 @torch.no_grad()
-def score_logits_letters(tok, model, prompt):
+def score_logits_letters(tok, model, prompt): ## pre logit processing
     inputs = tok(prompt, return_tensors="pt").to(DEVICE)
     out = model(**inputs)
     h = last_hidden_last_token(out, TARGET_LAYER)
@@ -43,7 +43,8 @@ def run(split="train", max_items=None):
         # group by CLASS = y (ground truth); pos if pred==y else neg
         (pos if pred==y else neg)[LETTER[y]].append(h.detach().cpu())
         n+=1
-        if max_items and n>=max_items: break
+        if max_items and n>=max_items: break 
+
 
     vecs = {}
     for k in LETTER:
