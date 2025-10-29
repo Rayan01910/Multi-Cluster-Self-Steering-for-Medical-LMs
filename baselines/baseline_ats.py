@@ -52,6 +52,9 @@ def evaluate_baseline(split="validation", csv_name="baseline_ats.csv"):
     for example in tqdm(dataset, desc=f"Evaluating {split} baseline"):
         prompt = build_prompt(example["stem"], list(example["choices"]))
         h_last, logits4 = _prompt_hidden_logits(tokenizer, model, prompt)
+        # Ensure tensors are in the dtype expected by the ATS head.
+        h_last = h_last.to(dtype=torch.float32)
+        logits4 = logits4.to(dtype=torch.float32)
         probs = apply_ats(ats_head, h_last, logits4).squeeze(0).cpu().numpy()
 
         pred_idx = int(np.argmax(probs))
