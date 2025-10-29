@@ -35,9 +35,16 @@ def run(split="train", max_items=None):
 
     n=0
     for item in tqdm(loader, total=len(ds)):
-        stem = item["stem"][0]; choices = item["choices"][0]; y = int(item["label"][0])
-        prompt = build_prompt(stem, choices)stem = item["stem"][0]
-        choices = list(item["choices"][0])  # ensure tuple → list of 4 strings ## just for compatibility with the data format
+        stem = item["stem"][0]
+        raw_choices = item["choices"]
+    
+        # Handle batch_size=1 wrapping and flatten inner tuples
+        if isinstance(raw_choices, list) and len(raw_choices) == 1:
+            raw_choices = raw_choices[0]
+    
+        # Flatten inner one-element tuples like ('Ampicillin',)
+        choices = [c[0] if isinstance(c, (list, tuple)) and len(c) == 1 else c for c in raw_choices]
+    
         y = int(item["label"][0])
         prompt = build_prompt(stem, choices)
         h, probs = score_logits_letters(tok, model, prompt)
