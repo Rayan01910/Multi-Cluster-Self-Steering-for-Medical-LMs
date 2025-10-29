@@ -21,7 +21,46 @@ def selective_loss(q_logits, y_idx, alpha=0.5):
 @torch.no_grad()
 def hidden_and_logits(tok, model, batch):
     H=[]; Z=[]
-    for stem, choices in zip(batch["stem"], batch["choices"]):
+    stems = batch["stem"]
+    choices_batch = batch["choices"]
+
+    # ``DataLoader``'s default collate_fn stacks list values by column, so a
+    # batch of ``["A", "B", "C", "D"]`` options becomes a list with four
+    # entries where each entry contains one option per example. For example, a
+    # batch size of 2 yields ``[("A", "A"), ("B", "B"), ("C", "C"),
+    # ("D", "D")]``. We need to transpose this structure back to the expected
+    # per-example layout before building prompts.
+    def _pull_option(container, key, idx):
+        if key in container:
+            return container[key]
+        fallback = str(idx)
+        if fallback in container:
+            return container[fallback]
+        raise KeyError(f"Missing option '{key}' in collated batch")
+
+    if isinstance(choices_batch, dict):
+        # Default PyTorch collation converts a list[dict] into dict[list].
+        choices_batch = list(
+            zip(*(_pull_option(choices_batch, key, idx) for idx, key in enumerate(LETTER)))
+        )
+    elif (
+            isinstance(choices_batch, (list, tuple))
+            and choices_batch
+            and isinstance(choices_batch[0], dict)
+    ):
+        # ``MedQADataset`` may have already returned list[dict[str,str]].
+        choices_batch = [
+            tuple(_pull_option(choice, key, idx) for idx, key in enumerate(LETTER))
+            for choice in choices_batch
+        ]
+    elif (
+            isinstance(choices_batch, (list, tuple))
+            and len(choices_batch) == len(LETTER)
+            and isinstance(choices_batch[0], (list, tuple))
+    ):
+        choices_batch = list(zip(*choices_batch))
+
+    for stem, choices in zip(stems, choices_batch):
         prompt = build_prompt(stem, list(choices))
         inputs = tok(prompt, return_tensors="pt").to(DEVICE)
         out = model(**inputs)
