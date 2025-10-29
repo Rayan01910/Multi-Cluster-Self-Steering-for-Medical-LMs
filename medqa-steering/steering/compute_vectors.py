@@ -36,6 +36,9 @@ def run(split="train", max_items=None):
     n=0
     for item in tqdm(loader, total=len(ds)):
         stem = item["stem"][0]; choices = item["choices"][0]; y = int(item["label"][0])
+        prompt = build_prompt(stem, choices)stem = item["stem"][0]
+        choices = list(item["choices"][0])  # ensure tuple → list of 4 strings ## just for compatibility with the data format
+        y = int(item["label"][0])
         prompt = build_prompt(stem, choices)
         h, probs = score_logits_letters(tok, model, prompt)
         pred = probs.argmax().item()
