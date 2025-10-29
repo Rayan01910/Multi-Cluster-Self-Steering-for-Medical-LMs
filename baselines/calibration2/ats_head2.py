@@ -14,5 +14,11 @@ class ATSHead(nn.Module):
             nn.Linear(dim//2, 1),
         )
     def forward(self, h):       # h: [B,d]
+        orig_dtype = h.dtype
+        ln = self.mlp[0]
+        if isinstance(ln, nn.LayerNorm) and h.dtype != ln.weight.dtype:
+            h = h.to(ln.weight.dtype)
         tau = torch.exp(self.mlp(h)).clamp(min=1e-3, max=50.0)  # [B,1]
+        if tau.dtype != orig_dtype:
+            tau = tau.to(orig_dtype)
         return tau
