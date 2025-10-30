@@ -55,8 +55,12 @@ def _default_compute_score(data_source, solution_str, ground_truth, extra_info=N
         res = countdown.compute_score(solution_str, ground_truth)
     elif data_source in ["tal-scq5k", "math-eval/TAL-SCQ5K"]:
         from . import gpqa
-    
+
         res = gpqa.compute_score(solution_str, ground_truth)
+    elif "medqa" in data_source.lower():
+        from . import medqa
+
+        res = medqa.compute_score(solution_str, ground_truth)
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
 
