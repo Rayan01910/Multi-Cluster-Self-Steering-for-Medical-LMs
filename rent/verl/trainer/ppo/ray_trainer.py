@@ -880,11 +880,15 @@ class RayPPOTrainer:
             except Exception as e:
                 print(f"Error extracting answer from {response_str}: {e}")
                 extracted_answer = None
+        elif "medqa" in data_source.lower():
+            from rent.verl.utils.reward_score import medqa
+
+            extracted_answer = medqa.extract_choice(response_str)
         elif "countdown" in data_source.lower():
             from rent.verl.utils.reward_score import countdown
             extracted_answer = countdown.extract_solution(response_str)
         else:
-            assert False, "Only gsm8k is supported for majority reward manager"        
+            assert False, "Only gsm8k is supported for majority reward manager"
         return extracted_answer
 
     def fit(self):
